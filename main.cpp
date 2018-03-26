@@ -1,9 +1,7 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 #include <iostream>
 #include <fstream>
-#include <string>
-#include <iostream>
 #include <vector>
 #include <map>
 
@@ -21,7 +19,31 @@ inline long long to_us(const D &d) {
     return std::chrono::duration_cast<std::chrono::microseconds>(d).count();
 }
 
-int file_to_lines(const char *path, std::vector<char *> &lines) {
+char *strtolower(char *s) {
+    ///put string to lowercase
+    for (int i = 0; i < strlen(s); ++i)
+        s[i] = static_cast<char>(tolower(s[i]));
+    return s;
+}
+
+void update_map(std::map<char *, int> &m, char *el) {
+    /// check if element is already in map
+    bool is_in_map = false;
+    for (auto &it: m) {
+        /// if is -- value is incremented
+        if (strcmp(it.first, el) == 0) {
+            it.second++;
+            is_in_map = true;
+            break;
+        }
+    }
+    /// if not -- added with value 1
+    if (!is_in_map) {
+        m[el] = 1;
+    }
+}
+
+int file_to_lines(const char *path, std::map<char *, int> &m, const char *delimiter) {
     /// variables declaration
     FILE *pFile;
     long lSize;
@@ -55,10 +77,11 @@ int file_to_lines(const char *path, std::vector<char *> &lines) {
     }
 
     /// split buffer into lines separated by whitespace:
-    buffer = strtok(buffer, " ");
+    buffer = strtok(buffer, delimiter);
     while (buffer) {
-        lines.emplace_back(buffer);
-        buffer = strtok(nullptr, " ");
+        words++;
+        update_map(m, strtolower(buffer));
+        buffer = strtok(nullptr, delimiter);
     }
 
     /// free buffer and return true if everything ok;
@@ -67,45 +90,20 @@ int file_to_lines(const char *path, std::vector<char *> &lines) {
     return 1;
 }
 
-void mapping(std::map<char *, int> &m, char *el) {
-    bool is_in_map = false;
-    for (auto &it: m) {
-        if (!strcmp(it.first, el)) {
-            it.second = it.second + 1;
-            is_in_map = true;
-            break;
-        }
-    }
-    if (!is_in_map) {
-        m[el] = 1;
-    }
-}
-
-int lines_to_dictionary(const std::vector<char *> lines, std::map<char *, int> &m) {
-    for (char *line: lines) {
-        line = strtok(line, "\n");
-        while (line) {
-            words++;
-            mapping(m, line);
-            line = strtok(nullptr, " \n");
-        }
-    }
-    return 1;
-}
-
 int main() {
+    const char *path = "/Users/cesarion_pshebytski/Downloads/DataSource/theBIG.txt";
+//    path = "example.txt";
     std::vector<char *> lines;
-    const char *path = "/Users/cesarion_pshebytski/Downloads/DataSource/Loyko_Aeroport_RuLit_Me_421937.txt";
-    path = "example.txt";
     std::map<char *, int> m;
-    file_to_lines(path, lines);
-    lines_to_dictionary(lines, m);
-    std::cout << "words: " <<words;
-    std::cout << "\n" << "different words: " << m.size() << "\n\n";
+    auto stage1_start_time = get_current_time_fenced();
+    file_to_lines(path, m, " .,:;!?()*«»<>-+/[]\"\'\n");
+
     for (auto &it : m) {
         std::cout << it.first << " : " << it.second << std::endl;
     }
-
+    std::cout << "\n\nTime : " << to_us(get_current_time_fenced() - stage1_start_time) << std::endl;
+    std::cout << "\n" << "words: " << words;
+    std::cout << "\n" << "different words: " << m.size();
 
     return 0;
 }
