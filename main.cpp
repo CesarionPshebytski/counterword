@@ -7,6 +7,8 @@
 #include <vector>
 #include <map>
 
+int words = 0;
+
 inline std::chrono::high_resolution_clock::time_point get_current_time_fenced() {
     std::atomic_thread_fence(std::memory_order_seq_cst);
     auto res_time = std::chrono::high_resolution_clock::now();
@@ -65,43 +67,26 @@ int file_to_lines(const char *path, std::vector<char *> &lines) {
     return 1;
 }
 
-void print_if_present(std::map<char *, int> &m, char *el, int &i) {
-    // Звертання m[...] заборонене!
-    // Воно може модифікувати відображення.
-//    auto itr = m.find(el);
-    bool add = true;
-    for (auto &it : m) {
-        if(!strcmp(it.first, el)){
-            add = false;
+void mapping(std::map<char *, int> &m, char *el) {
+    bool is_in_map = false;
+    for (auto &it: m) {
+        if (!strcmp(it.first, el)) {
+            it.second = it.second + 1;
+            is_in_map = true;
             break;
         }
     }
-    if (!add) {
-        auto itr = m.find(el);
-        m[el]+=2;
-        for (auto &it : m) {
-            std::cout << it.first << " : " << it.second << std::endl;
-        }
-        std::cout<< "\n";
-        std::cout << "Element " << el << " is present" << std::endl << "\n";
-    } else {
-        m[el]=0;
-        for (auto &it : m) {
-            std::cout << it.first << " : " << it.second << std::endl;
-        }
-        std::cout<< "\n";
-//        auto it = m.begin();
-//        m.insert(it, std::pair<char *, int>(el, ++i));
-//        std::cout << "Element " << el << " is not present" << std::endl;
+    if (!is_in_map) {
+        m[el] = 1;
     }
 }
 
 int lines_to_dictionary(const std::vector<char *> lines, std::map<char *, int> &m) {
-    int i = 0;
     for (char *line: lines) {
         line = strtok(line, "\n");
         while (line) {
-            print_if_present(m, line, i);
+            words++;
+            mapping(m, line);
             line = strtok(nullptr, " \n");
         }
     }
@@ -115,7 +100,8 @@ int main() {
     std::map<char *, int> m;
     file_to_lines(path, lines);
     lines_to_dictionary(lines, m);
-    std::cout << "\n" << lines.size() << "\n";
+    std::cout << "words: " <<words;
+    std::cout << "\n" << "different words: " << m.size() << "\n\n";
     for (auto &it : m) {
         std::cout << it.first << " : " << it.second << std::endl;
     }
