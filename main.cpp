@@ -32,6 +32,9 @@ char *filter_string(char *s) {
     return arr;
 }
 
+
+
+
 void update_map(std::unordered_map<char *, int> &m, char *el) {
     /// check if element is already in map
     if(strcmp(el, "") == 0) return;
@@ -49,6 +52,42 @@ void update_map(std::unordered_map<char *, int> &m, char *el) {
         m[el] = 1;
     }
 }
+
+std::vector<std::pair<int, int>>  get_indexes(char* buffer, size_t result, int thread_count) {
+    std::vector<std::pair<int,int>> vector;
+    int step = (int) result / thread_count;
+    int start = 0,end;
+    for(size_t i = 0; i <= result; i+=step) {
+
+        if ( isspace(buffer[start])) {
+            while( start <= result) {
+
+                if(isspace(buffer[start])) {
+                    start++;
+                }else {
+
+                    break;
+                }
+            }
+        }
+        end = start+step;
+        if ( isspace(buffer[end])) {
+            while( end <= result) {
+
+                if(isspace(buffer[end])) {
+                    end++;
+                }else {
+                    break;
+                }
+            }
+        }
+        std::cout<< "start " << start << " end " << end << std::endl;
+        vector.push_back(std::make_pair(start,end));
+        start = end;
+
+    }
+    return vector;
+};
 
 int file_to_map(const char *path, std::unordered_map<char *, int> &m, const char *delimiter) {
     /// variables declaration
@@ -82,7 +121,8 @@ int file_to_map(const char *path, std::unordered_map<char *, int> &m, const char
         fputs("Reading error", stderr);
         return 0;
     }
-
+    std::vector<std::pair<int,int>> vector = get_indexes(buffer, result, 3);
+    std::cout<< vector.at(0).first << std::endl;
     /// split buffer into lines separated by whitespace:
     buffer = strtok(buffer, delimiter);
     while (buffer) {
@@ -114,8 +154,7 @@ bool string_comparator(const std::pair<char *, int> &a, const std::pair<char *, 
 
 int main() {
     const char *path = "/Users/cesarion_pshebytski/Downloads/DataSource/theBIG.txt";
-    path = "data.txt";
-//    path = "example.txt";
+    path = "example.txt";
     std::unordered_map<char *, int> m;
     auto stage1_start_time = get_current_time_fenced();
     file_to_map(path, m, " \n");
