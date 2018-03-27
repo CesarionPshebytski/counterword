@@ -2,8 +2,10 @@
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
-#include <vector>
 #include <map>
+#include <vector>
+#include <unordered_map>
+#include <regex>
 
 int words = 0;
 
@@ -19,15 +21,20 @@ inline long long to_us(const D &d) {
     return std::chrono::duration_cast<std::chrono::microseconds>(d).count();
 }
 
-char *strtolower(char *s) {
-    ///put string to lowercase
-    for (int i = 0; i < strlen(s); ++i)
-        s[i] = static_cast<char>(tolower(s[i]));
-    return s;
+char *filter_string(char *s) {
+    ///filter string from nonalpha symbols and put string to lowercase
+    std::string r;
+    std::remove_copy_if(s, s + strlen(s), std::back_inserter(r),
+                        std::not1(std::ptr_fun<int, int>(&std::isalpha)));
+    std::transform(r.begin(), r.end(), r.begin(), ::tolower);
+    auto *arr = static_cast<char *>(malloc(sizeof(char) * r.size()));
+    strcpy(arr, r.c_str());
+    return arr;
 }
 
-void update_map(std::map<char *, int> &m, char *el) {
+void update_map(std::unordered_map<char *, int> &m, char *el) {
     /// check if element is already in map
+    if(strcmp(el, "") == 0) return;
     bool is_in_map = false;
     for (auto &it: m) {
         /// if is -- value is incremented
@@ -43,7 +50,7 @@ void update_map(std::map<char *, int> &m, char *el) {
     }
 }
 
-int file_to_lines(const char *path, std::map<char *, int> &m, const char *delimiter) {
+int file_to_map(const char *path, std::unordered_map<char *, int> &m, const char *delimiter) {
     /// variables declaration
     FILE *pFile;
     long lSize;
@@ -80,7 +87,7 @@ int file_to_lines(const char *path, std::map<char *, int> &m, const char *delimi
     buffer = strtok(buffer, delimiter);
     while (buffer) {
         words++;
-        update_map(m, strtolower(buffer));
+        update_map(m, filter_string(buffer));
         buffer = strtok(nullptr, delimiter);
     }
 
@@ -90,20 +97,43 @@ int file_to_lines(const char *path, std::map<char *, int> &m, const char *delimi
     return 1;
 }
 
+template<class T1, class T2>
+std::multimap<T2, T1> swapPairs(std::unordered_map<T1, T2> m) {
+    std::multimap<T2, T1> m1;
+
+    for (auto &&item : m) {
+        m1.emplace(item.second, item.first);
+    }
+
+    return m1;
+};
+
+bool string_comparator(const std::pair<char *, int> &a, const std::pair<char *, int> &b) {
+    return strcmp(a.first, b.first) < 0;
+}
+
 int main() {
     const char *path = "/Users/cesarion_pshebytski/Downloads/DataSource/theBIG.txt";
+    path = "data.txt";
 //    path = "example.txt";
-    std::vector<char *> lines;
-    std::map<char *, int> m;
+    std::unordered_map<char *, int> m;
     auto stage1_start_time = get_current_time_fenced();
-    file_to_lines(path, m, " .,:;!?()*«»<>-+/[]\"\'\n");
+    file_to_map(path, m, " \n");
 
-    for (auto &it : m) {
+    std::vector<std::pair<char *, int>> sorted_elements(m.begin(), m.end());
+    std::sort(sorted_elements.begin(), sorted_elements.end(), string_comparator);
+    for (auto &it : sorted_elements) {
         std::cout << it.first << " : " << it.second << std::endl;
     }
+
+    std::cout << "\n";
+    const std::multimap<int, char *> &m1 = swapPairs(m);
+    for (auto i : m1) {
+        std::cout << i.first << " : " << i.second << std::endl;
+    }
+
     std::cout << "\n\nTime : " << to_us(get_current_time_fenced() - stage1_start_time) << std::endl;
     std::cout << "\n" << "words: " << words;
     std::cout << "\n" << "different words: " << m.size();
-
     return 0;
 }
