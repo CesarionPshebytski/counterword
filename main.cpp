@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <regex>
 #include <string>
+#include <sstream>
 
 inline std::chrono::high_resolution_clock::time_point get_current_time_fenced() {
     std::atomic_thread_fence(std::memory_order_seq_cst);
@@ -24,17 +25,20 @@ bool x (char i) { return (!isalnum(i)); }
 
 char *filter_string(char *s) {
     ///filter string from nonalpha symbols and return lowercase string
-    std::string r;
+    std::string r = s;
 
-    std::remove_copy_if(s, s + strlen(s), std::back_inserter(r), x);
+//    std::remove_copy_if(s, s + strlen(s), std::back_inserter(r), x);
+    r.erase(std::remove_if(r.begin(), r.end(), x), r.end());
     std::transform(r.begin(), r.end(), r.begin(), ::tolower);
     auto *arr = static_cast<char *>(malloc(r.size()));
     strcpy(arr, r.c_str());
+    //std::cout<<"^^^"<<arr<<" "<<strlen(arr)<<std::endl;
     return arr;
 }
 
 void update_map(std::unordered_map<char *, int> &m, char *el) {
     /// check if element is already in map
+    //std::cout << "\n     el: " << el << "\n";
     if (strcmp(el, "") == 0) return;
     bool is_in_map = false;
     for (auto &it: m) {
@@ -47,7 +51,13 @@ void update_map(std::unordered_map<char *, int> &m, char *el) {
     }
     /// if not -- added with value 1
     if (!is_in_map) {
-        m[el] = 1;
+        //std::cout << "     el to map: " << el << "\n\n";
+        auto iter = m.begin();
+        m.insert(iter, std::pair<char *,int>(el,1));
+//        m[el] = 1;
+        for (auto &it: m) {
+            //std::cout << "     " << it.first << " : " << it.second << "\n";
+        }
     }
 }
 
@@ -86,13 +96,27 @@ int file_to_map(const char *path, std::unordered_map<char *, int> &m, const char
         return 0;
     }
 
+    //std::cout<<"\n";
+    //std::cout<<"@@@@@@@@@\n"<<buffer<<"\n@@@@@@@@@"<<std::endl;
+    //std::cout<<"\n";
+
     /// split buffer into lines separated by whitespace:
     auto analyzing_time = get_current_time_fenced();
-    buffer = strtok(buffer, delimiter);
-    while (buffer) {
-        update_map(m, filter_string(buffer));
-        buffer = strtok(nullptr, delimiter);
+    std::string test = buffer;
+    std::string word;
+    std::vector<std::string> words;
+    for(std::stringstream s(test); s>>word;){
+        words.push_back(word);
     }
+    for(const std::string &single_word: words){
+        update_map(m, filter_string(const_cast<char *>(single_word.c_str())));
+    }
+//    buffer = strtok(buffer, delimiter);
+//    while (buffer!=NULL) {
+//        //std::cout<<"###"<<qeqz<<" "<<strlen(qeqz)<<std::endl;
+//        update_map(m, filter_string(buffer));
+//        buffer = strtok(NULL, delimiter);
+//    }
     std::cout << "Analyzing time: " << to_us(get_current_time_fenced() - analyzing_time) << std::endl;
 
     /// free buffer and return true if everything ok;
@@ -162,9 +186,7 @@ configuration_t read_configuration(const std::string &filename) {
 }
 
 int main() {
-    using namespace std;
-
-    string filename("config.txt");
+    std::string filename("config.txt");
     configuration_t config = read_configuration(filename);
     const char *path = std::regex_replace(config.infile, std::regex("\""), "").c_str();
     const char *out_by_a = std::regex_replace(config.out_by_a, std::regex("\""), "").c_str();
@@ -173,17 +195,20 @@ int main() {
     FILE *pFile;
 
     auto stage1_start_time = get_current_time_fenced();
-    file_to_map(path, m, " \n");
+    file_to_map(path, m, "\n \t");
 
     std::vector<std::pair<char *, int>> sorted_elements(m.begin(), m.end());
     std::sort(sorted_elements.begin(), sorted_elements.end(), string_comparator);
     pFile = fopen(out_by_a, "w");
     for (auto &it : sorted_elements) {
+        //std::cout<<"___"<<it.first<<" : "<<it.second<<"  "<<strlen(it.first)<<std::endl;
         auto *first = static_cast<char *>(malloc(strlen(it.first) + sizeof(it.second)));
         strcat(strcpy(first, it.first), (" : " + std::to_string(it.second) + "\n").c_str());
         fwrite(first, 1, strlen(first), pFile);
     }
     fclose(pFile);
+
+    //std::cout<<"\n";
 
     std::multimap<int, char *> m1 = swapPairs(m);
     m.clear();
@@ -197,6 +222,22 @@ int main() {
     m1.clear();
     fclose(pFile);
 
-    std::cout << "Total time : " << to_us(get_current_time_fenced() - stage1_start_time) << std::endl;
+    std::cout << "Total time : " << to_us(get_current_time_fenced() - stage1_start_time);
     return 0;
 }
+
+
+//1 : depressedlookingporto
+//1 : porto
+//1 : rico
+//1 : from
+//1 : depressedlookingindividual
+//2 : individual
+
+//1 : depressedlookingporto
+//1 : individual
+//1 : from
+//1 : porto
+//1 : rico
+//1 : depressedlookingeindividual
+
