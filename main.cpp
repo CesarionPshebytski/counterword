@@ -61,6 +61,42 @@ void update_map(std::unordered_map<char *, int> &m, char *el) {
     }
 }
 
+std::vector<std::pair<int, int>>  get_indexes(char* buffer, size_t result, int thread_count) {
+    std::vector<std::pair<int,int>> vector;
+    int step = (int) result / thread_count;
+    int start = 0,end;
+    for(size_t i = 0; i <= result; i+=step) {
+
+        if ( isspace(buffer[start])) {
+            while( start <= result) {
+
+                if(isspace(buffer[start])) {
+                    start++;
+                }else {
+
+                    break;
+                }
+            }
+        }
+        end = start+step;
+        if ( isspace(buffer[end])) {
+            while( end <= result) {
+
+                if(isspace(buffer[end])) {
+                    end++;
+                }else {
+                    break;
+                }
+            }
+        }
+        std::cout<< "start " << start << " end " << end << std::endl;
+        vector.push_back(std::make_pair(start,end));
+        start = end;
+
+    }
+    return vector;
+};
+
 int file_to_map(const char *path, std::unordered_map<char *, int> &m, const char *delimiter) {
     /// variables declaration
     FILE *pFile;
