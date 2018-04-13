@@ -98,7 +98,7 @@ std::vector<std::pair<int, int>>  get_indexes(char* buffer, size_t result, int t
     return vector;
 };
 
-void multiple_update(std::unordered_map<char *, int> &m, char *el, int start, int end, std::vector<std::string> words) {
+void multiple_update(std::unordered_map<char *, int> &m, std::vector<std::string> words, int start, int end ) {
     for(std::vector<int>::size_type i = start; i != end; i++) {
         update_map(m, filter_string(const_cast<char *>(words[i].c_str())));
     }
@@ -156,7 +156,7 @@ int file_to_map(const char *path, std::unordered_map<char *, int> &m, const char
     int start = 0, step = (int) words.size()/nthreads,
         end = words.size();
     for ( int n = 0; n< nthreads; n++) {
-        threads.emplace_back( multiple_update, m, filter_string(const_cast<char *>(words[i].c_str())), start, end);
+        threads.emplace_back( multiple_update, m, words, start, end);
         start += step;
     }
     // old one, without threads
