@@ -3,11 +3,13 @@
 #include <iostream>
 #include <thread>
 #include <fstream>
+#include <mutex>
 #include <map>
 #include <vector>
 #include <unordered_map>
 #include <regex>
 #include <string>
+#include <atomic>
 #include <sstream>
 
 inline std::chrono::high_resolution_clock::time_point get_current_time_fenced() {
@@ -173,7 +175,7 @@ int file_to_map(const char *path, std::unordered_map<char *, int> &m, const char
     std::vector<std::pair<int,int>> indexes = find_indexes(words,thread_number);
 
     for(std::pair<int,int> index_pair : indexes) {
-        threads.emplace_back(std::thread(multiple_update, &m, words, index_pair.first, index_pair.second));
+        threads.emplace_back(std::thread(multiple_update, std::ref(m), words,index_pair.first, index_pair.second));
     }
 
     for (auto &thread : threads) thread.join();
