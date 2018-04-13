@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <thread>         // std::thread
 #include <fstream>
 #include <map>
 #include <vector>
@@ -97,6 +98,12 @@ std::vector<std::pair<int, int>>  get_indexes(char* buffer, size_t result, int t
     return vector;
 };
 
+void multiple_update(std::unordered_map<char *, int> &m, char *el, int start, int end, std::vector<std::string> words) {
+    for(std::vector<int>::size_type i = start; i != end; i++) {
+        update_map(m, filter_string(const_cast<char *>(words[i].c_str())));
+    }
+}
+
 int file_to_map(const char *path, std::unordered_map<char *, int> &m, const char *delimiter) {
     /// variables declaration
     FILE *pFile;
@@ -144,9 +151,18 @@ int file_to_map(const char *path, std::unordered_map<char *, int> &m, const char
     for(std::stringstream s(test); s>>word;){
         words.push_back(word);
     }
-    for(const std::string &single_word: words){
-        update_map(m, filter_string(const_cast<char *>(single_word.c_str())));
+    std::vector<std::thread> threads;
+    int nthreads = (int) words.size() / 3;
+    int start = 0, step = (int) words.size()/nthreads,
+        end = words.size();
+    for ( int n = 0; n< nthreads; n++) {
+        threads.emplace_back( multiple_update, m, filter_string(const_cast<char *>(words[i].c_str())), start, end);
+        start += step;
     }
+    // old one, without threads
+//    for(const std::string &single_word: words){
+//        update_map(m, filter_string(const_cast<char *>(single_word.c_str())));
+//    }
 //    buffer = strtok(buffer, delimiter);
 //    while (buffer!=NULL) {
 //        //std::cout<<"###"<<qeqz<<" "<<strlen(qeqz)<<std::endl;
