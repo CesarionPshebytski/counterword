@@ -26,7 +26,7 @@ inline long long to_us(const D &d) {
 
 bool x(char i) { return (!isalnum(i)); }
 
-char *filter_string(char *s) {
+char *filter_string(const char *s) {
     ///filter string from nonalpha symbols and return lowercase string
     std::string r = s;
 
@@ -119,7 +119,7 @@ std::vector<std::pair<int, int>> get_indexes(char* buffer, size_t result, int th
 
 void multiple_update(std::unordered_map<char *, int> &m, std::vector<std::string> words, int start, int end) {
     for (std::vector<int>::size_type i = start; i != end; i++) {
-        update_map(m, filter_string(const_cast<char *>(words[i].c_str())));
+        update_map(m, filter_string(words[i].c_str()));
     }
 }
 
