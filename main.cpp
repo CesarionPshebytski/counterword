@@ -1,7 +1,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
-#include <thread>         // std::thread
+#include <thread>
 #include <fstream>
 #include <map>
 #include <vector>
@@ -22,7 +22,7 @@ inline long long to_us(const D &d) {
     return std::chrono::duration_cast<std::chrono::microseconds>(d).count();
 }
 
-bool x (char i) { return (!isalnum(i)); }
+bool x(char i) { return (!isalnum(i)); }
 
 char *filter_string(char *s) {
     ///filter string from nonalpha symbols and return lowercase string
@@ -54,7 +54,7 @@ void update_map(std::unordered_map<char *, int> &m, char *el) {
     if (!is_in_map) {
         //std::cout << "     el to map: " << el << "\n\n";
         auto iter = m.begin();
-        m.insert(iter, std::pair<char *,int>(el,1));
+        m.insert(iter, std::pair<char *, int>(el, 1));
 //        m[el] = 1;
         for (auto &it: m) {
             //std::cout << "     " << it.first << " : " << it.second << "\n";
@@ -62,49 +62,66 @@ void update_map(std::unordered_map<char *, int> &m, char *el) {
     }
 }
 
-std::vector<std::pair<int, int>>  get_indexes(char* buffer, size_t result, int thread_count) {
-    std::vector<std::pair<int,int>> vector;
+std::vector<std::pair<int, int>> find_indexes(std::vector<std::string> words, int threads) {
+    std::vector<std::pair<int, int>> vector;
+    int step = (int) words.size() / threads;
+    int start = 0;
+    int end;
+    for (size_t i = 0; i <= words.size(); i += step) {
+        if ( ( words.size() - start+step < step  )) {
+            end = words.size();
+        }else {
+            end = start+step;
+        }
+        vector.push_back(std::make_pair(start, end));
+        start = end+1;
+    }
+    return vector;
+}
+
+std::vector<std::pair<int, int>> get_indexes(char* buffer, size_t result, int thread_count) {
+    std::vector<std::pair<int, int>> vector;
     int step = (int) result / thread_count;
-    int start = 0,end;
-    for(size_t i = 0; i <= result; i+=step) {
+    int start = 0, end;
+    for (size_t i = 0; i <= result; i += step) {
 
-        if ( isspace(buffer[start])) {
-            while( start <= result) {
+        if (isspace(buffer[start])) {
+            while (start <= result) {
 
-                if(isspace(buffer[start])) {
+                if (isspace(buffer[start])) {
                     start++;
-                }else {
+                } else {
 
                     break;
                 }
             }
         }
-        end = start+step;
-        if ( isspace(buffer[end])) {
-            while( end <= result) {
+        end = start + step;
+        if (isspace(buffer[end])) {
+            while (end <= result) {
 
-                if(isspace(buffer[end])) {
+                if (isspace(buffer[end])) {
                     end++;
-                }else {
+                } else {
                     break;
                 }
             }
         }
-        std::cout<< "start " << start << " end " << end << std::endl;
-        vector.push_back(std::make_pair(start,end));
+        std::cout << "start " << start << " end " << end << std::endl;
+        vector.push_back(std::make_pair(start, end));
         start = end;
 
     }
     return vector;
 };
 
-void multiple_update(std::unordered_map<char *, int> &m, std::vector<std::string> words, int start, int end ) {
-    for(std::vector<int>::size_type i = start; i != end; i++) {
+void multiple_update(std::unordered_map<char *, int> &m, std::vector<std::string> words, int start, int end) {
+    for (std::vector<int>::size_type i = start; i != end; i++) {
         update_map(m, filter_string(const_cast<char *>(words[i].c_str())));
     }
 }
 
-int file_to_map(const char *path, std::unordered_map<char *, int> &m, const char *delimiter) {
+int file_to_map(const char *path, std::unordered_map<char *, int> &m, const char *delimiter, int thread_number) {
     /// variables declaration
     FILE *pFile;
     long lSize;
@@ -148,17 +165,18 @@ int file_to_map(const char *path, std::unordered_map<char *, int> &m, const char
     std::string test = buffer;
     std::string word;
     std::vector<std::string> words;
-    for(std::stringstream s(test); s>>word;){
+    for (std::stringstream s(test); s >> word;) {
         words.push_back(word);
     }
     std::vector<std::thread> threads;
-    int nthreads = (int) words.size() / 3;
-    int start = 0, step = (int) words.size()/nthreads,
-        end = words.size();
-    for ( int n = 0; n< nthreads; n++) {
-        threads.emplace_back( multiple_update, m, words, start, end);
-        start += step;
+
+    std::vector<std::pair<int,int>> indexes = find_indexes(words,thread_number);
+
+    for(std::pair<int,int> index_pair : indexes) {
+        threads.emplace_back(std::thread(multiple_update, &m, words, index_pair.first, index_pair.second));
     }
+
+    for (auto &thread : threads) thread.join();
     // old one, without threads
 //    for(const std::string &single_word: words){
 //        update_map(m, filter_string(const_cast<char *>(single_word.c_str())));
@@ -243,11 +261,12 @@ int main() {
     const char *path = std::regex_replace(config.infile, std::regex("\""), "").c_str();
     const char *out_by_a = std::regex_replace(config.out_by_a, std::regex("\""), "").c_str();
     const char *out_by_n = std::regex_replace(config.out_by_n, std::regex("\""), "").c_str();
+    int thread_number = config.thread_number;
     std::unordered_map<char *, int> m;
     FILE *pFile;
 
     auto stage1_start_time = get_current_time_fenced();
-    file_to_map(path, m, "\n \t");
+    file_to_map(path, m, "\n \t", thread_number);
 
     std::vector<std::pair<char *, int>> sorted_elements(m.begin(), m.end());
     std::sort(sorted_elements.begin(), sorted_elements.end(), string_comparator);
