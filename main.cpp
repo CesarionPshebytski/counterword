@@ -166,18 +166,23 @@ int file_to_map(const char *path, std::unordered_map<std::string, int> &m, const
     //std::cout<<"\n";
 
     /// split buffer into lines separated by whitespace:
-    auto analyzing_time = get_current_time_fenced();
-    std::string test = buffer;
+    auto loading_time = get_current_time_fenced();
     std::string word;
     std::vector<std::string> words;
- /*   for (std::stringstream s(test); s >> word;) {
-        words.push_back(word);
-    } */
+    /*   for (std::stringstream s(test); s >> word;) {
+           words.push_back(word);
+       } */
     std::ifstream file;
     file.open(path);
     while(file >> word) {
         words.push_back(word);
     }
+    std::cout << "Reading time: " << to_us(get_current_time_fenced() - loading_time) << std::endl;
+
+    // analyze time
+    auto analyzing_time = get_current_time_fenced();
+//    std::string test = buffer;
+
     std::vector<std::thread> threads;
 
     std::vector<std::pair<int, int>> indexes = find_indexes(words, thread_number);
