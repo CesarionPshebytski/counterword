@@ -24,64 +24,65 @@ inline long long to_us(const D &d) {
     return std::chrono::duration_cast<std::chrono::microseconds>(d).count();
 }
 
-bool x(char i) { return (!isalnum(i)); }
-
-char *filter_string(const char *s) {
+std::string filter_string(std::string s) {
     ///filter string from nonalpha symbols and return lowercase string
-    std::string r = s;
+    std::string r{s};
 
 //    std::remove_copy_if(s, s + strlen(s), std::back_inserter(r), x);
-    r.erase(std::remove_if(r.begin(), r.end(), x), r.end());
+    r.erase(std::remove_if(r.begin(), r.end(), [](auto c) { return !isalnum(c); }), r.end());
     std::transform(r.begin(), r.end(), r.begin(), ::tolower);
-    auto *arr = static_cast<char *>(malloc(r.size()));
-    strcpy(arr, r.c_str());
     //std::cout<<"^^^"<<arr<<" "<<strlen(arr)<<std::endl;
-    return arr;
+    return r;
 }
 
-void update_map(std::unordered_map<char *, int> &m, char *el) {
+/*
+void update_map(std::unordered_map<char *, int> &m, std::string el) {
     /// check if element is already in map
     //std::cout << "\n     el: " << el << "\n";
-    if (strcmp(el, "") == 0) return;
+    if (el== "") return;
     bool is_in_map = false;
     for (auto &it: m) {
         /// if is -- value is incremented
-        if (strcmp(it.first, el) == 0) {
+        if (it.first == el) {
             it.second++;
             is_in_map = true;
             break;
         }
     }
+
     /// if not -- added with value 1
     if (!is_in_map) {
         //std::cout << "     el to map: " << el << "\n\n";
         auto iter = m.begin();
-        m.insert(iter, std::pair<char *, int>(el, 1));
+        m.insert(iter, std::pair<std::string, int>(el, 1));
 //        m[el] = 1;
         for (auto &it: m) {
             //std::cout << "     " << it.first << " : " << it.second << "\n";
         }
     }
 }
-
+*/
 std::vector<std::pair<int, int>> find_indexes(std::vector<std::string> words, int threads) {
     std::vector<std::pair<int, int>> vector;
     int step = (int) words.size() / threads;
     int start = 0;
     int end;
     for (size_t i = 0; i <= words.size(); i += step) {
-        if ( ( words.size() - start+step < step  )) {
+        if ( end+ 2*step >  words.size() ) {
             end = words.size();
-        }else {
-            end = start+step;
+            if( vector.back().second == words.size()) {
+                break;
+            }
+        } else {
+            end = start + step;
         }
         vector.push_back(std::make_pair(start, end));
-        start = end+1;
+        start = end;
     }
     return vector;
 }
 
-std::vector<std::pair<int, int>> get_indexes(char* buffer, size_t result, int thread_count) {
+std::vector<std::pair<int, int>> get_indexes(char *buffer, size_t result, int thread_count) {
     std::vector<std::pair<int, int>> vector;
     int step = (int) result / thread_count;
     int start = 0, end;
@@ -117,19 +118,20 @@ std::vector<std::pair<int, int>> get_indexes(char* buffer, size_t result, int th
     return vector;
 };
 
-void multiple_update(std::unordered_map<char *, int> &m, std::vector<std::string> words, int start, int end) {
-    for (std::vector<int>::size_type i = start; i != end; i++) {
-        update_map(m, filter_string(words[i].c_str()));
+void multiple_update(std::unordered_map<std::string, int> &m, const std::vector<std::string> &words, size_t start,
+                     size_t end) {
+    for (auto i = start; i != end; ++i) {
+        ++m[filter_string(words[i])];
     }
 }
 
-int file_to_map(const char *path, std::unordered_map<char *, int> &m, const char *delimiter, int thread_number) {
+int file_to_map(const char *path, std::unordered_map<std::string, int> &m, const char *delimiter, int thread_number) {
     /// variables declaration
     FILE *pFile;
     long lSize;
     size_t result;
     char *buffer;
-
+/*
     /// open file from path for reading;
     pFile = fopen(path, "r");
     if (pFile == nullptr) {
@@ -148,15 +150,16 @@ int file_to_map(const char *path, std::unordered_map<char *, int> &m, const char
         fputs("Memory error", stderr);
         return 0;
     }
-
+*/
     /// copy the file into the buffer:
-    auto loading_time = get_current_time_fenced();
-    result = fread(buffer, 1, static_cast<size_t>(lSize), pFile);
-    std::cout << "Reading time: " << to_us(get_current_time_fenced() - loading_time) << std::endl;
-    if (result != lSize) {
-        fputs("Reading error", stderr);
-        return 0;
-    }
+//    std::vector
+//    auto loading_time = get_current_time_fenced();
+//    result = fread(buffer, 1, lSize, pFile);
+//    std::cout << "Reading time: " << to_us(get_current_time_fenced() - loading_time) << std::endl;
+//    if (result != lSize) {
+//        fputs("Reading error", stderr);
+//        return 0;
+//    }
 
     //std::cout<<"\n";
     //std::cout<<"@@@@@@@@@\n"<<buffer<<"\n@@@@@@@@@"<<std::endl;
@@ -167,15 +170,20 @@ int file_to_map(const char *path, std::unordered_map<char *, int> &m, const char
     std::string test = buffer;
     std::string word;
     std::vector<std::string> words;
-    for (std::stringstream s(test); s >> word;) {
+ /*   for (std::stringstream s(test); s >> word;) {
+        words.push_back(word);
+    } */
+    std::ifstream file;
+    file.open(path);
+    while(file >> word) {
         words.push_back(word);
     }
     std::vector<std::thread> threads;
 
-    std::vector<std::pair<int,int>> indexes = find_indexes(words,thread_number);
+    std::vector<std::pair<int, int>> indexes = find_indexes(words, thread_number);
 
-    for(std::pair<int,int> index_pair : indexes) {
-        threads.emplace_back(std::thread(multiple_update, std::ref(m), words,index_pair.first, index_pair.second));
+    for (std::pair<int, int> index_pair : indexes) {
+        threads.emplace_back(std::thread(multiple_update, std::ref(m), words, index_pair.first, index_pair.second));
     }
 
     for (auto &thread : threads) thread.join();
@@ -192,8 +200,9 @@ int file_to_map(const char *path, std::unordered_map<char *, int> &m, const char
     std::cout << "Analyzing time: " << to_us(get_current_time_fenced() - analyzing_time) << std::endl;
 
     /// free buffer and return true if everything ok;
-    free(buffer);
-    fclose(pFile);
+//    free(buffer);
+//    fclose(pFile);
+
     return 1;
 }
 
@@ -207,9 +216,9 @@ std::multimap<T2, T1> swapPairs(std::unordered_map<T1, T2> m) {
     return m1;
 };
 
-bool string_comparator(const std::pair<char *, int> &a, const std::pair<char *, int> &b) {
+bool string_comparator(const std::pair<std::string, int> &a, const std::pair<std::string, int> &b) {
     ///comparator for string sorting
-    return strcmp(a.first, b.first) < 0;
+    return a.first.compare(b.first);
 }
 
 struct configuration_t {
@@ -264,33 +273,35 @@ int main() {
     const char *out_by_a = std::regex_replace(config.out_by_a, std::regex("\""), "").c_str();
     const char *out_by_n = std::regex_replace(config.out_by_n, std::regex("\""), "").c_str();
     int thread_number = config.thread_number;
-    std::unordered_map<char *, int> m;
+    std::unordered_map<std::string, int> m;
     FILE *pFile;
 
     auto stage1_start_time = get_current_time_fenced();
     file_to_map(path, m, "\n \t", thread_number);
 
-    std::vector<std::pair<char *, int>> sorted_elements(m.begin(), m.end());
+    std::vector<std::pair<std::string, int>> sorted_elements(m.begin(), m.end());
     std::sort(sorted_elements.begin(), sorted_elements.end(), string_comparator);
     pFile = fopen(out_by_a, "w");
     for (auto &it : sorted_elements) {
         //std::cout<<"___"<<it.first<<" : "<<it.second<<"  "<<strlen(it.first)<<std::endl;
-        auto *first = static_cast<char *>(malloc(strlen(it.first) + sizeof(it.second)));
-        strcat(strcpy(first, it.first), (" : " + std::to_string(it.second) + "\n").c_str());
-        fwrite(first, 1, strlen(first), pFile);
+        std::string first;
+        first = it.first + " : " + std::to_string(it.second) + "\n";
+
+        fwrite(first.c_str(), 1, first.length(), pFile);
     }
     fclose(pFile);
 
     //std::cout<<"\n";
 
-    std::multimap<int, char *> m1 = swapPairs(m);
+    std::multimap<int, std::string> m1 = swapPairs(m);
     m.clear();
     pFile = fopen(out_by_n, "w");
     for (auto &it : m1) {
-        auto *first = static_cast<char *>(malloc(strlen(it.second) + sizeof(it.first)));
+        std::string first;
         std::string second = it.second;
-        strcat(strcpy(first, std::to_string(it.first).c_str()), (" : " + second + "\n").c_str());
-        fwrite(first, 1, strlen(first), pFile);
+        first = std::to_string(it.first) + " : " + second + "\n";
+
+        fwrite(first.c_str(), 1, first.length(), pFile);
     }
     m1.clear();
     fclose(pFile);
