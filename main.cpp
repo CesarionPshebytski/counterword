@@ -3,7 +3,6 @@
 #include <iostream>
 #include <thread>
 #include <fstream>
-#include <mutex>
 #include <map>
 #include <vector>
 #include <unordered_map>
@@ -25,60 +24,31 @@ inline long long to_us(const D &d) {
 }
 
 std::string filter_string(std::string s) {
-    ///filter string from nonalpha symbols and return lowercase string
     std::string r{s};
 
-//    std::remove_copy_if(s, s + strlen(s), std::back_inserter(r), x);
     r.erase(std::remove_if(r.begin(), r.end(), [](auto c) { return !isalnum(c); }), r.end());
     std::transform(r.begin(), r.end(), r.begin(), ::tolower);
-    //std::cout<<"^^^"<<arr<<" "<<strlen(arr)<<std::endl;
+
     return r;
 }
 
-/*
-void update_map(std::unordered_map<char *, int> &m, std::string el) {
-    /// check if element is already in map
-    //std::cout << "\n     el: " << el << "\n";
-    if (el== "") return;
-    bool is_in_map = false;
-    for (auto &it: m) {
-        /// if is -- value is incremented
-        if (it.first == el) {
-            it.second++;
-            is_in_map = true;
-            break;
-        }
-    }
 
-    /// if not -- added with value 1
-    if (!is_in_map) {
-        //std::cout << "     el to map: " << el << "\n\n";
-        auto iter = m.begin();
-        m.insert(iter, std::pair<std::string, int>(el, 1));
-//        m[el] = 1;
-        for (auto &it: m) {
-            //std::cout << "     " << it.first << " : " << it.second << "\n";
-        }
-    }
-}
-*/
 std::vector<std::pair<int, int>> find_indexes(std::vector<std::string> words, int threads) {
     std::vector<std::pair<int, int>> vector;
     int step = (int) words.size() / threads;
     int start = 0;
     int end;
-    for (size_t i = 0; i <= words.size(); i += step) {
-        if ( end+ 2*step >  words.size() ) {
+
+    for(int i = 0; i< threads; i++) {
+        if(words.size() - start < step) {
             end = words.size();
-            if( vector.back().second == words.size()) {
-                break;
-            }
-        } else {
-            end = start + step;
+        }else {
+            end = start+step;
         }
         vector.push_back(std::make_pair(start, end));
         start = end;
     }
+
     return vector;
 }
 
@@ -120,58 +90,24 @@ std::vector<std::pair<int, int>> get_indexes(char *buffer, size_t result, int th
 
 void multiple_update(std::unordered_map<std::string, int> &m, const std::vector<std::string> &words, size_t start,
                      size_t end) {
+    std::string word;
     for (auto i = start; i != end; ++i) {
-        ++m[filter_string(words[i])];
+        word = filter_string(words[i]);
+        if(word == "") {
+            continue;
+        }
+            ++m[word];
+
     }
 }
 
 int file_to_map(const char *path, std::unordered_map<std::string, int> &m, const char *delimiter, int thread_number) {
-    /// variables declaration
-    FILE *pFile;
-    long lSize;
-    size_t result;
-    char *buffer;
-/*
-    /// open file from path for reading;
-    pFile = fopen(path, "r");
-    if (pFile == nullptr) {
-        fputs("File error", stderr);
-        return 0;
-    }
 
-    /// obtain file size:
-    fseek(pFile, 0, SEEK_END);
-    lSize = ftell(pFile);
-    rewind(pFile);
-
-    /// allocate memory to contain the whole file:
-    buffer = (char *) malloc(sizeof(char) * lSize);
-    if (buffer == nullptr) {
-        fputs("Memory error", stderr);
-        return 0;
-    }
-*/
-    /// copy the file into the buffer:
-//    std::vector
-//    auto loading_time = get_current_time_fenced();
-//    result = fread(buffer, 1, lSize, pFile);
-//    std::cout << "Reading time: " << to_us(get_current_time_fenced() - loading_time) << std::endl;
-//    if (result != lSize) {
-//        fputs("Reading error", stderr);
-//        return 0;
-//    }
-
-    //std::cout<<"\n";
-    //std::cout<<"@@@@@@@@@\n"<<buffer<<"\n@@@@@@@@@"<<std::endl;
-    //std::cout<<"\n";
 
     /// split buffer into lines separated by whitespace:
     auto loading_time = get_current_time_fenced();
     std::string word;
     std::vector<std::string> words;
-    /*   for (std::stringstream s(test); s >> word;) {
-           words.push_back(word);
-       } */
     std::ifstream file;
     file.open(path);
     while(file >> word) {
@@ -180,33 +116,27 @@ int file_to_map(const char *path, std::unordered_map<std::string, int> &m, const
     std::cout << "Reading time: " << to_us(get_current_time_fenced() - loading_time) << std::endl;
 
     // analyze time
+    std::vector<std::pair<int, int>> indexes = find_indexes(words, thread_number);
     auto analyzing_time = get_current_time_fenced();
 //    std::string test = buffer;
 
     std::vector<std::thread> threads;
 
-    std::vector<std::pair<int, int>> indexes = find_indexes(words, thread_number);
 
     for (std::pair<int, int> index_pair : indexes) {
         threads.emplace_back(std::thread(multiple_update, std::ref(m), words, index_pair.first, index_pair.second));
     }
 
     for (auto &thread : threads) thread.join();
-    // old one, without threads
+//     old one, without threads
 //    for(const std::string &single_word: words){
-//        update_map(m, filter_string(const_cast<char *>(single_word.c_str())));
+//        ++m[filter_string(single_word)];
+////        update_map(m, filter_string(const_cast<char *>(single_word.c_str())));
 //    }
-//    buffer = strtok(buffer, delimiter);
-//    while (buffer!=NULL) {
-//        //std::cout<<"###"<<qeqz<<" "<<strlen(qeqz)<<std::endl;
-//        update_map(m, filter_string(buffer));
-//        buffer = strtok(NULL, delimiter);
-//    }
+
     std::cout << "Analyzing time: " << to_us(get_current_time_fenced() - analyzing_time) << std::endl;
 
-    /// free buffer and return true if everything ok;
-//    free(buffer);
-//    fclose(pFile);
+
 
     return 1;
 }
@@ -223,7 +153,7 @@ std::multimap<T2, T1> swapPairs(std::unordered_map<T1, T2> m) {
 
 bool string_comparator(const std::pair<std::string, int> &a, const std::pair<std::string, int> &b) {
     ///comparator for string sorting
-    return a.first.compare(b.first);
+    return a.first.compare(b.first) < 0;
 }
 
 struct configuration_t {
@@ -315,18 +245,4 @@ int main() {
     return 0;
 }
 
-
-//1 : depressedlookingporto
-//1 : porto
-//1 : rico
-//1 : from
-//1 : depressedlookingindividual
-//2 : individual
-
-//1 : depressedlookingporto
-//1 : individual
-//1 : from
-//1 : porto
-//1 : rico
-//1 : depressedlookingeindividual
 
